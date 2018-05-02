@@ -95,7 +95,7 @@ void handler::handle_post(http_request message)
 		return;
 	}
 	if ((split_path.size() == 4) && (std::regex_match(utility::conversions::to_utf8string(path), post_blob_url))) {
-		message.reply(post_blob(split_path[1], split_path[3], message.extract_string().get())).then([&](pplx::task<void> t) { handle_error(t); });
+		message.reply(post_blob(split_path[1], split_path[3], message.body())).then([&](pplx::task<void> t) { handle_error(t); });
 		return;
 	}
 

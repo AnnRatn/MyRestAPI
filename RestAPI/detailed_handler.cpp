@@ -1,5 +1,6 @@
 #include "handler.h"
 #include "stdafx.h"
+#include <chrono>
 
 using namespace utility;
 using namespace concurrency;
@@ -182,20 +183,28 @@ web::http::status_code handler::post_container(const utility::string_t& url) {
 }
 
 //create blob
-web::http::status_code handler::post_blob(const utility::string_t& cont_url, const utility::string_t& blob_url, const utility::string_t& body) {
+web::http::status_code handler::post_blob(const utility::string_t& cont_url, const utility::string_t& blob_url, const concurrency::streams::istream& body) {
 
 	utility::string_t file = main_server_path + cont_url + U("\\") + blob_url + U(".blob");
-
+	char symb;
+	//char newbuff[10];
 	try {
-		utility::ofstream_t out(file, ios::binary);
-		out.write(body.c_str(), body.length());
+		//auto begin = chrono::high_resolution_clock::now(); //start time
+		ofstream out(file, ios::binary);
+		concurrency::streams::async_istream<char> stream(body.streambuf());
+
+		while(stream.get(symb)){
+			out.put(symb);
+		}
+		
 		out.close();
+		//auto end = chrono::high_resolution_clock::now(); //end time
+		//cout << chrono::duration_cast<chrono::nanoseconds>(end - begin).count() << "ns" << endl;
 	}
 	/*if blob can not be created*/
 	catch (...) {
 		return web::http::status_codes::BadRequest;
 	}
-
 	return web::http::status_codes::OK;
 }
 
@@ -216,15 +225,15 @@ web::http::status_code handler::post_merge(const utility::string_t& url, const u
 	StringCchPrintf(local_file_path, 300, L"%s%s%s", path, L"\\merge.", format.c_str());
 	utility::ifstream_t in;
 	utility::ofstream_t out(local_file_path, ios::binary);
-	utility::char_t newbuff[100];
+	int buf_size = 10;
+	utility::char_t* newbuf = new utility::char_t[buf_size];
 	if (!out) {
 		return web::http::status_codes::BadRequest;
 	}
 
 	hf = FindFirstFile(local_path, &FindFileData);
 	utility::string_t file_name;
-
-	utility::char_t* buf = NULL;
+	int k = 0;
 
 	/*if any blobs exist*/
 	if (hf != INVALID_HANDLE_VALUE)
@@ -239,13 +248,17 @@ web::http::status_code handler::post_merge(const utility::string_t& url, const u
 				if (!in) {
 					return web::http::status_codes::BadRequest;
 				}
-
-				while (in.read(newbuff, 100)) 
+				in.seekg(0, ios::end);
+				int sizef = in.tellg();
+				in.seekg(0, ios::beg);
+				while (in.read(newbuf, buf_size)) 
 				{
-					out.write(newbuff, 100);
+					out.write(newbuf, buf_size);
+					k++;
 				}
-
+				out.write(newbuf, sizef - buf_size * k);
 				in.close();
+				k = 0;
 				
 				DeleteFile(local_file_path);
 			}
@@ -253,11 +266,11 @@ web::http::status_code handler::post_merge(const utility::string_t& url, const u
 
 		FindClose(hf);
 		out.close();
-		delete[] buf;
 
 		delete[] path;
 		delete[] local_path;
 		delete[] local_file_path;
+		delete[] newbuf;
 
 		return web::http::status_codes::OK;
 	}

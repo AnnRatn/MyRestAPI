@@ -55,7 +55,7 @@ public:
 	/*handle POST-request for "/container\/[0-9]*"*/
 	web::http::status_code post_container(const utility::string_t& url);
 	/*handle POST-request for "/container\/[0-9]*\/blob\/[0-9]*"*/
-	web::http::status_code post_blob(const utility::string_t& cont_url, const utility::string_t& blob_url, const utility::string_t& body);
+	web::http::status_code post_blob(const utility::string_t& cont_url, const utility::string_t& blob_url, const concurrency::streams::istream& body);
 	/*handle POST-request for "/container\/[0-9]*\/merge"*/
 	web::http::status_code post_merge(const utility::string_t& url, const utility::string_t& format);
 	/*handle DELETE-request for "/container\/[0-9]*"*/
