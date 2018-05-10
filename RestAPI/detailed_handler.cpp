@@ -193,9 +193,7 @@ web::http::status_code handler::post_blob(const utility::string_t& cont_url, con
 		ofstream out(file, ios::binary);
 		concurrency::streams::async_istream<char> stream(body.streambuf());
 
-		while(stream.get(symb)){
-			out.put(symb);
-		}
+		out << stream.rdbuf();
 		
 		out.close();
 		//auto end = chrono::high_resolution_clock::now(); //end time
@@ -225,15 +223,12 @@ web::http::status_code handler::post_merge(const utility::string_t& url, const u
 	StringCchPrintf(local_file_path, 300, L"%s%s%s", path, L"\\merge.", format.c_str());
 	utility::ifstream_t in;
 	utility::ofstream_t out(local_file_path, ios::binary);
-	int buf_size = 10;
-	utility::char_t* newbuf = new utility::char_t[buf_size];
 	if (!out) {
 		return web::http::status_codes::BadRequest;
 	}
 
 	hf = FindFirstFile(local_path, &FindFileData);
 	utility::string_t file_name;
-	int k = 0;
 
 	/*if any blobs exist*/
 	if (hf != INVALID_HANDLE_VALUE)
@@ -248,17 +243,8 @@ web::http::status_code handler::post_merge(const utility::string_t& url, const u
 				if (!in) {
 					return web::http::status_codes::BadRequest;
 				}
-				in.seekg(0, ios::end);
-				int sizef = in.tellg();
-				in.seekg(0, ios::beg);
-				while (in.read(newbuf, buf_size)) 
-				{
-					out.write(newbuf, buf_size);
-					k++;
-				}
-				out.write(newbuf, sizef - buf_size * k);
+				out << in.rdbuf();
 				in.close();
-				k = 0;
 				
 				DeleteFile(local_file_path);
 			}
@@ -270,7 +256,6 @@ web::http::status_code handler::post_merge(const utility::string_t& url, const u
 		delete[] path;
 		delete[] local_path;
 		delete[] local_file_path;
-		delete[] newbuf;
 
 		return web::http::status_codes::OK;
 	}
